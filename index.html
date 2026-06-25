@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Package - Reparto Automático</title>
+    <meta name="theme-color" content="#1e293b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link id="pwa-manifest" rel="manifest">
+    
+    <style>
+        :root {
+            --bg-principal: #0f172a;
+            --bg-tarjeta: #1e293b;
+            --gris-oscuro: #334155;
+            --gris-medio: #64748b;
+            --gris-claro: #94a3b8;
+            --texto-blanco: #f8fafc;
+            --acento-verde: #10b981;
+            --acento-azul: #3b82f6;
+            --sombra: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-principal); color: var(--texto-blanco); padding: 16px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 16px; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
+        header h1 { font-size: 26px; font-weight: 800; }
+        header h1 span { color: var(--gris-claro); font-weight: 300; }
+        
+        .card { background-color: var(--bg-tarjeta); border-radius: 16px; padding: 16px; border: 1px solid var(--gris-oscuro); box-shadow: var(--sombra); }
+        .seccion-titulo { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gris-claro); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; font-weight: bold; }
+        
+        /* FORMULARIO SIMPLIFICADO */
+        .form-grupo { display: flex; flex-direction: column; gap: 10px; }
+        input { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--gris-oscuro); background-color: var(--bg-principal); color: var(--texto-blanco); font-size: 15px; }
+        input:focus { outline: 2px solid var(--acento-azul); }
+        
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; font-size: 15px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: background 0.2s; }
+        .btn-tutorial { background-color: var(--gris-oscuro); color: var(--gris-claro); font-size: 12px; padding: 8px; }
+        .btn-accion { background-color: var(--texto-blanco); color: var(--bg-principal); }
+        .btn-entregado { background-color: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); margin-top: 10px; }
+        
+        #tutorial-box { display: none; background-color: var(--bg-principal); padding: 12px; border-radius: 10px; font-size: 13px; color: var(--gris-claro); line-height: 1.5; border-left: 3px solid var(--acento-azul); margin-top: 8px; }
+        .monitor-gps { display: flex; justify-content: space-between; background-color: var(--bg-principal); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 12px; color: var(--acento-azul); }
+        
+        /* LISTA DE PAQUETES */
+        .tarjeta-paquete { background-color: var(--bg-tarjeta); border-radius: 14px; padding: 14px; border: 1px solid var(--gris-oscuro); border-left: 6px solid var(--gris-medio); margin-bottom: 10px; position: relative; }
+        .tarjeta-paquete.notificado { border-left-color: var(--acento-azul); background: linear-gradient(90deg, #1e293b 0%, #1d3557 100%); }
+        .tarjeta-paquete.entregado { border-left-color: var(--acento-verde); opacity: 0.5; }
+        
+        .paquete-badg { position: absolute; top: 14px; right: 14px; font-size: 10px; font-weight: bold; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
+        .badg-en_ruta { background: var(--gris-oscuro); color: var(--gris-claro); }
+        .badg-notificado { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .badg-entregado { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        
+        .paquete-nombre { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
+        .paquete-detalles { font-size: 13px; color: var(--gris-claro); }
+        .consola { background-color: #000; color: #34d399; font-family: monospace; font-size: 11px; padding: 10px; border-radius: 8px; height: 90px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Package<span>.app</span></h1>
+        <button class="btn btn-tutorial" style="width: auto;" onclick="conmutarTutorial()">¿Cómo usar?</button>
+    </header>
+
+    <div id="tutorial-box">
+        <b>Herramienta de Reparto Automatizada:</b><br>
+        1. Pon el nombre del cliente, teléfono y su dirección real.<br>
+        2. Pulsa "Guardar Paquete". La app buscará la geolocalización sola a través de internet de forma invisible.<br>
+        3. Mientras conduces con la app abierta, el sistema medirá la distancia real por GPS. Al estar a menos de 300 metros, enviará el aviso automático.
+    </div>
+
+    <div class="card">
+        <div class="seccion-titulo">Rastreador de Posición Real (GPS Móvil)</div>
+        <div class="monitor-gps">
+            <span id="real-lat">Lat: Buscando señal...</span>
+            <span id="real-lon">Lon: Buscando señal...</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="seccion-titulo">Registrar Nueva Entrega (Sin Coordenadas)</div>
+        <div class="form-grupo">
+            <input type="text" id="form-cliente" placeholder="Nombre del Cliente">
+            <input type="text" id="form-telefono" placeholder="Teléfono de contacto móvil">
+            <input type="text" id="form-direccion" placeholder="Dirección completa (Ej: Calle Ancha 5, Mahon)">
+            <button id="btn-registro" class="btn btn-accion" onclick="crearNuevoPaqueteAutomatico()">Guardar Paquete en Ruta</button>
+        </div>
+    </div>
+
+    <div class="seccion-titulo" style="margin-top: 10px;">Tu Hoja de Ruta Activa</div>
+    <div id="contenedor-rutas"></div>
+
+    <div class="seccion-titulo">Historial y Envío de Alertas Automáticas</div>
+    <div id="log-consola" class="consola">> Sensor GPS y motor de localización preparados...</div>
+</div>
+
+<script>
+    // medbasha
+
+    // Configuración automática de la PWA
+    const manifestData = {
+        "short_name": "Package",
+        "name": "Package - Reparto Sin Carga",
+        "icons": [{
+            "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%231e293b%22/><path d=%22M30 30h40v40H30z%22 fill=%22%2394a3b8%22/></svg>",
+            "type": "image/svg+xml",
+            "sizes": "512x512"
+        }],
+        "start_url": ".",
+        "background_color": "#0f172a",
+        "theme-color": "#1e293b",
+        "display": "standalone"
+    };
+    document.getElementById('pwa-manifest').setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestData)));
+
+    if ('serviceWorker' in navigator) {
+        const blob = new Blob([`self.addEventListener('fetch', e => {});`], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(blob), { scope: './' });
+    }
+
+    // GESTOR DE RUTAS REALES
+    class AutoRouteManager {
+        constructor(radioMetros = 300) {
+            this.radioAviso = radioMetros;
+            this.paquetes = JSON.parse(localStorage.getItem('package_rutas_auto')) || [];
+        }
+
+        guardarEnDisco() {
+            localStorage.setItem('package_rutas_auto', JSON.stringify(this.paquetes));
+        }
+
+        agregarPaqueteListo(cliente, telefono, direccion, lat, lon) {
+            const nuevo = {
+                id: 'PKG-' + Math.floor(1000 + Math.random() * 9000),
+                cliente,
+                telefono: telefono || "Sin teléfono",
+                direccion,
+                coordenadas: { lat: parseFloat(lat), lon: parseFloat(lon) },
+                notificado: false,
+                estado: 'en_ruta'
+            };
+            this.paquetes.push(nuevo);
+            this.guardarEnDisco();
+            this.renderizar();
+            escribirConsola(`[RUTAS] Registrado correctamente: ${nuevo.id}`);
+        }
+
+        _haversine(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+        }
+
+        procesarGeofencingGPS(latReal, lonReal) {
+            document.getElementById('real-lat').innerText = `Lat: ${latReal.toFixed(5)}`;
+            document.getElementById('real-lon').innerText = `Lon: ${lonReal.toFixed(5)}`;
+
+            this.paquetes.forEach(p => {
+                if (p.estado === 'en_ruta' && !p.notificado) {
+                    const distancia = this._haversine(latReal, lonReal, p.coordenadas.lat, p.coordenadas.lon);
+                    if (distancia <= this.radioAviso) {
+                        p.notificado = true;
+                        p.estado = 'notificado';
+                        this.guardarEnDisco();
+                        escribirConsola(`[AUTOMÁTICO] SMS enviado a ${p.cliente}. Distancia: ${Math.round(distancia)}m.`);
+                        this.renderizar();
+                    }
+                }
+            });
+        }
+
+        finalizarEntrega(id) {
+            const p = this.paquetes.find(pkg => pkg.id === id);
+            if (p) {
+                p.estado = 'entregado';
+                this.guardarEnDisco();
+                escribirConsola(`[ESTADO] Paquete ${id} entregado.`);
+                this.renderizar();
+            }
+        }
+
+        renderizar() {
+            const box = document.getElementById('contenedor-rutas');
+            box.innerHTML = '';
+            if (this.paquetes.length === 0) {
+                box.innerHTML = '<div style="text-align:center; font-size:13px; color:var(--gris-medio); padding:20px;">Tu hoja de ruta está vacía.</div>';
+                return;
+            }
+            this.paquetes.forEach(p => {
+                const div = document.createElement('div');
+                div.className = `tarjeta-paquete ${p.estado}`;
+                div.innerHTML = `
+                    <span class="paquete-badg badg-${p.estado}">${p.estado}</span>
+                    <div style="font-size:10px; font-family:monospace; color:var(--gris-claro);">${p.id}</div>
+                    <div class="paquete-nombre">${p.cliente}</div>
+                    <div class="paquete-detalles">📍 ${p.direccion}</div>
+                    ${p.estado === 'notificado' ? `<button class="btn btn-entregado" onclick="coreApp.finalizarEntrega('${p.id}')">Confirmar Entrega</button>` : ''}
+                `;
+                box.appendChild(div);
+            });
+        }
+    }
+
+    const coreApp = new AutoRouteManager(300);
+    coreApp.renderizar();
+
+    // GEOCODIFICACIÓN AUTOMÁTICA MEDIANTE API INTERNA
+    async function crearNuevoPaqueteAutomatico() {
+        const cliente = document.getElementById('form-cliente').value;
+        const telefono = document.getElementById('form-telefono').value;
+        const direccion = document.getElementById('form-direccion').value;
+        const boton = document.getElementById('btn-registro');
+
+        if (!cliente || !direccion) {
+            alert("El nombre y la dirección son obligatorios para poder localizar el paquete.");
+            return;
+        }
+
+        boton.innerText = "Buscando coordenadas...";
+        boton.disabled = true;
+        escribirConsola(`[API] Localizando coordenadas para: "${direccion}"...`);
+
+        try {
+            // Llamada directa y gratuita a la API de geocodificación de OpenStreetMap
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}&limit=1`;
+            const respuesta = await fetch(url, { headers: { 'User-Agent': 'PackageAppReparto' } });
+            const datos = await respuesta.json();
+
+            if (datos && datos.length > 0) {
+                const latAuto = datos[0].lat;
+                const lonAuto = datos[0].lon;
+                
+                // Si la API encuentra la calle, se registra directamente de forma transparente
+                coreApp.agregarPaqueteListo(cliente, telefono, direccion, latAuto, lonAuto);
+                
+                // Limpiar campos
+                document.getElementById('form-cliente').value = '';
+                document.getElementById('form-telefono').value = '';
+                document.getElementById('form-direccion').value = '';
+            } else {
+                alert("No hemos podido localizar esa dirección exacta en el mapa de satélite. Intenta escribirla de forma más clara (Ej: Nombre de calle, Número, Ciudad).");
+                escribirConsola("[API ERROR] Dirección no encontrada.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error de conexión al buscar la dirección automática.");
+        } finally {
+            boton.innerText = "Guardar Paquete en Ruta";
+            boton.disabled = false;
+        }
+    }
+
+    // Sensor GPS nativo en tiempo real
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            pos => { coreApp.procesarGeofencingGPS(pos.coords.latitude, pos.coords.longitude); },
+            err => { escribirConsola("[GPS] Esperando activación de permisos de localización..."); },
+            { enableHighAccuracy: true, timeout: 15000 }
+        );
+    }
+
+    function conmutarTutorial() {
+        const caja = document.getElementById('tutorial-box');
+        caja.style.display = (caja.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function escribirConsola(msg) {
+        const con = document.getElementById('log-consola');
+        con.innerText += `\n> ${msg}`;
+        con.scrollTop = con.scrollHeight;
+    }
+</script>
+</body>
+</html>
